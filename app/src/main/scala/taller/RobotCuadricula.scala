@@ -92,5 +92,30 @@ class RobotCuadricula {
   // Punto 5 -------------------------------------------------------------------
 
   /** Una orden equivalente más corta, con las reglas del enunciado. */
-  def simplificar(o: Orden): Orden = ???
+  def simplificar(o: Orden): Orden = o match {
+    case Avanzar(0)=> Secuencia(Nil)
+    case Avanzar(_)=> o
+    case Girar(_)=> o
+    case Repetir(veces, orden) => if (veces <= 0) Secuencia(Nil)
+    else {
+      val interior = simplificar(orden)
+      if (veces == 1) interior
+      else if (interior == Secuencia(Nil)) Secuencia(Nil)
+      else Repetir(veces, interior)
+    }
+    case Secuencia(ordenes) => val aplanadas = ordenes.flatMap(x => simplificar(x) match {
+      case Secuencia(hijas) => hijas
+      case otra=> List(otra)
+    })
+      val juntas = aplanadas.foldLeft(List.empty[Orden]) {
+        case (Avanzar(a) :: resto, Avanzar(b)) => Avanzar(a + b) :: resto
+        case (acumulada, orden)=> orden :: acumulada
+      }.reverse
+      val sinCeros = juntas.filter(x => x != Avanzar(0))
+      sinCeros match {
+        case Nil => Secuencia(Nil)
+        case unica :: Nil => unica
+        case varias => Secuencia(varias)
+      }
+  }
 }

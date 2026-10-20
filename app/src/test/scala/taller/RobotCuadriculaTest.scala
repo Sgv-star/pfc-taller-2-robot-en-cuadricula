@@ -388,4 +388,27 @@ class RobotCuadriculaTest extends AnyFunSuite {
   test("simplificar: el anidamiento interior también se reduce") {
     assert(simplificar(Repetir(3, Repetir(1, Avanzar(2)))) == Repetir(3, Avanzar(2)))
   }
+  test("simplificar: tres avances seguidos se juntan en uno") {
+    assert(simplificar(Secuencia(List(Avanzar(1), Avanzar(2), Avanzar(3)))) == Avanzar(6))
+  }
+
+  test("simplificar: avances de signo contrario se restan") {
+    assert(simplificar(Secuencia(List(Avanzar(5), Avanzar(-2)))) == Avanzar(3))
+  }
+
+  test("simplificar: avanzar cero entre dos giros desaparece") {
+    assert(simplificar(Secuencia(List(Girar(Derecha), Avanzar(0), Girar(Izquierda)))) ==
+      Secuencia(List(Girar(Derecha), Girar(Izquierda))))
+  }
+
+  test("simplificar: simplifica el interior de una repetición") {
+    assert(simplificar(Repetir(3, Secuencia(List(Avanzar(1), Avanzar(2), Girar(Derecha))))) ==
+      Repetir(3, Secuencia(List(Avanzar(3), Girar(Derecha)))))
+  }
+
+  test("simplificar: aplana las secuencias anidadas") {
+    assert(simplificar(Secuencia(List(
+      Secuencia(List(Avanzar(1), Girar(Derecha))), Avanzar(2)))) ==
+      Secuencia(List(Avanzar(1), Girar(Derecha), Avanzar(2))))
+  }
 }
