@@ -55,7 +55,9 @@ class RobotCuadricula {
     case Avanzar(_) => 1
     case Girar(_)   => 1
     case Secuencia(ordenes) => ordenes.map(cuantasBasicas).sum
-    case Repetir(veces, orden) => veces * cuantasBasicas(orden)
+    case Repetir(veces, orden) =>
+      if (veces <= 0) 0
+      else veces * cuantasBasicas(orden)
   }
 
   /** Niveles de anidamiento: una básica tiene 1, una compuesta uno más que la más honda. */

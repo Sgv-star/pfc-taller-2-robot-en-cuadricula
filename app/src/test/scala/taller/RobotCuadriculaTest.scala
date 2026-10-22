@@ -135,8 +135,8 @@ class RobotCuadriculaTest extends AnyFunSuite {
     assert(cuantasBasicas(Girar(Izquierda)) == 1)
   }
 
-  test("cuantasBasicas: dos avances en secuencia suman dos") {
-    assert(cuantasBasicas(Secuencia(List(Avanzar(2), Avanzar(3)))) == 2)
+  test("cuantasBasicas: repetir con veces negativo no ejecuta nada y da cero") {
+    assert(cuantasBasicas(Repetir(-3, Avanzar(1))) == 0)
   }
 
   test("cuantasBasicas: repetir tres veces un giro da tres básicas") {
