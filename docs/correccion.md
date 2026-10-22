@@ -9,7 +9,7 @@ El tipo `Orden` está definido recursivamente por cuatro alternativas:
 - Casos básicos: `Avanzar(n)` y `Girar(s)`.
 - Casos recursivos: `Repetir(k, o)` y `Secuencia(List(o_1, ..., o_n))`, que contienen otras órdenes.
 
-Por eso, para demostrar que una función sobre `Orden` es correcta se usa **inducción estructural**: un caso por cada alternativa, y en los casos recursivos se supone la hipótesis de inducción (HI) para las órdenes contenidas. Cuando una función usa `foldLeft` (proceso iterativo), se argumenta con **estado, estado inicial, estado final, invariante y transformación**.
+Por eso para demostrar que una función sobre `Orden` es correcta se usa inducción estructural: un caso por cada alternativa, y en los casos recursivos se supone la hipótesis de inducción (HI) para las órdenes. Cuando una función usa `foldLeft` (que es iterativo), se argumenta con **estado, estado inicial, estado final, invariante y transformación**.
 
 | Punto | Función | Técnica |
 |---|---|---|
@@ -32,8 +32,6 @@ $$
 (x - n,\ y,\ m) & m = \text{Oeste}
 \end{cases}
 $$
-
-x
 
 $$
 \mathcal{E}(\text{Repetir}(k, o)) = \mathcal{E}(o)^{k}, \qquad \mathcal{E}(\text{Secuencia}(\text{List}(o_1, \ldots, o_n))) = \mathcal{E}(o_n) \circ \cdots \circ \mathcal{E}(o_1)
@@ -75,7 +73,7 @@ Como `Direccion` y `Sentido` son `sealed`, hay $4 \cdot 2 = 8$ parejas posibles 
 | Oeste | Derecha | Norte | Norte |
 | Oeste | Izquierda | Sur | Sur |
 
-Las 8 filas coinciden. $\blacksquare$
+Las 8 filas coinciden.
 
 ## 3. Punto 2: `ejecutar`
 
@@ -119,7 +117,7 @@ $$
 \rightarrow \mathcal{E}(o)^{k-1}(\mathcal{E}(o)(e)) = \mathcal{E}(o)^{k}(e)
 $$
 
-Concluimos por inducción sobre $k$. $\blacksquare$
+Concluimos por inducción sobre $k$.
 
 ### Lema B: el `foldLeft` de `Secuencia` es una iteración correcta
 
@@ -129,7 +127,7 @@ $$
 L.\text{foldLeft}(e)(\text{ejecutar}) == \mathcal{E}(o_n) \circ \cdots \circ \mathcal{E}(o_1)(e)
 $$
 
-Este programa implementa el siguiente proceso iterativo:
+Esto implementa el siguiente proceso iterativo:
 
 - Un estado $s = (acc, l)$, donde $acc$ es el estado del robot y $l = \text{List}(o_i, \ldots, o_n)$ son las órdenes que faltan por ejecutar.
 - El estado inicial es $s_0 = (e, L)$.
@@ -151,7 +149,7 @@ $$
 
 **3.** $\text{Inv}(s_f) \rightarrow$ respuesta correcta. En un estado final $l = \text{List}()$, es decir $i = n + 1$, y entonces $acc = \mathcal{E}(o_n) \circ \cdots \circ \mathcal{E}(o_1)(e)$.
 
-**4.** En cada paso $l$ pierde un elemento. Después de $n$ pasos $l = \text{List}()$, así que siempre se llega al estado final. $\blacksquare$
+**4.** En cada paso $l$ pierde un elemento. Después de $n$ pasos $l = \text{List}()$, así que siempre se llega al estado final.
 
 ### Teorema 2: corrección de `ejecutar`
 
@@ -193,7 +191,7 @@ $$
 
 Para $n = 0$ el resultado es $e$, que es $\text{id}(e)$.
 
-Concluimos por inducción estructural que $\forall o, \forall e : \text{ejecutar}(e, o) == \mathcal{E}(o)(e)$. $\blacksquare$
+Concluimos por inducción estructural que $\forall o, \forall e : \text{ejecutar}(e, o) == \mathcal{E}(o)(e)$.
 
 A partir de aquí, "ejecutar $o$" y "aplicar $\mathcal{E}(o)$" son lo mismo.
 
@@ -201,20 +199,24 @@ A partir de aquí, "ejecutar $o$" y "aplicar $\mathcal{E}(o)$" son lo mismo.
 
 ### `cuantasBasicas`
 
-Sea $N(o)$ el número de veces que `ejecutar` llega a un caso `Avanzar` o `Girar` al ejecutar $o$ (contando repeticiones). Por el Teorema 2, `Repetir(k, o)` con $k \geq 0$ ejecuta $o$ exactamente $k$ veces, y `Secuencia` ejecuta cada una de sus órdenes una vez. Entonces:
+Sea $N(o)$ el número de veces que `ejecutar` llega a un caso `Avanzar` o `Girar` al ejecutar $o$ (contando repeticiones). Por el Teorema 2, `Repetir(k, o)` ejecuta $o$ exactamente $k$ veces si $k > 0$, y ninguna si $k \leq 0$ (porque `ejecutar` la trata como la identidad). `Secuencia` ejecuta cada una de sus órdenes una vez. Entonces:
 
 $$
-N(\text{Avanzar}(n)) = N(\text{Girar}(s)) = 1, \qquad N(\text{Repetir}(k, o)) = k \cdot N(o), \qquad N(\text{Secuencia}(\text{List}(o_1, \ldots, o_n))) = \sum_{i=1}^{n} N(o_i)
+N(\text{Avanzar}(n)) = N(\text{Girar}(s)) = 1
 $$
 
-**Hipótesis:** todo `Repetir(k, o)` tiene $k \geq 0$.
+$$
+N(\text{Repetir}(k, o)) = \begin{cases}0 & k \leq 0 \\ k \cdot N(o) & k > 0\end{cases}, \qquad N(\text{Secuencia}(\text{List}(o_1, \ldots, o_n))) = \sum_{i=1}^{n} N(o_i)
+$$
 
 ```scala
 def cuantasBasicas(o: Orden): Int = o match {
   case Avanzar(_) => 1
   case Girar(_)   => 1
   case Secuencia(ordenes) => ordenes.map(cuantasBasicas).sum
-  case Repetir(veces, orden) => veces * cuantasBasicas(orden)
+  case Repetir(veces, orden) =>
+    if (veces <= 0) 0
+    else veces * cuantasBasicas(orden)
 }
 ```
 
@@ -227,7 +229,12 @@ Se usan dos propiedades de las listas, ambas por inducción sobre la lista:
 
 **Casos base:** $\text{cuantasBasicas}(\text{Avanzar}(n)) \rightarrow 1 = N(\text{Avanzar}(n))$. Igual para `Girar`.
 
-**Caso de inducción:** $o = \text{Repetir}(k, o')$. Por HI, $\text{cuantasBasicas}(o') = N(o')$. Entonces $\text{cuantasBasicas}(o) \rightarrow k \cdot \text{cuantasBasicas}(o') = k \cdot N(o') = N(o)$.
+**Caso de inducción:** $o = \text{Repetir}(k, o')$. Por HI, $\text{cuantasBasicas}(o') = N(o')$. Hay dos ramas:
+
+- **$k \leq 0$:** $\text{cuantasBasicas}(o) \rightarrow 0 = N(o)$, porque `ejecutar` no ejecuta $o'$ ninguna vez.
+- **$k > 0$:** $\text{cuantasBasicas}(o) \rightarrow k \cdot \text{cuantasBasicas}(o') = k \cdot N(o') = N(o)$.
+
+La rama $k \leq 0$ es la que evita contar el interior de una repetición que nunca ocurre. Sin ella, $k \cdot N(o')$ daría un número negativo, que no puede ser un conteo de ejecuciones.
 
 **Caso de inducción:** $o = \text{Secuencia}(\text{List}(o_1, \ldots, o_n))$. Por HI, $\text{cuantasBasicas}(o_i) = N(o_i)$ para todo $i$. Entonces:
 
@@ -235,7 +242,7 @@ $$
 \text{ordenes.map(cuantasBasicas).sum} = \text{List}(N(o_1), \ldots, N(o_n)).\text{sum} = \sum_{i=1}^{n} N(o_i) = N(o)
 $$
 
-Concluimos por inducción estructural. $\blacksquare$
+Concluimos por inducción estructural.
 
 ### `profundidad`
 
@@ -267,7 +274,7 @@ $$
 
 **3.** En el estado final $i = n + 1$, así que $m = \max(\{0\} \cup \{P(o_1), \ldots, P(o_n)\})$.
 
-**4.** En cada paso $l$ pierde un elemento, y después de $n$ pasos queda vacía. $\blacksquare$
+**4.** En cada paso $l$ pierde un elemento, y después de $n$ pasos queda vacía.
 
 ```scala
 def profundidad(o: Orden): Int = o match {
@@ -288,7 +295,7 @@ def profundidad(o: Orden): Int = o match {
 
 **Caso de inducción:** $o = \text{Secuencia}(\text{List}(o_1, \ldots, o_n))$. Por HI, $\text{profundidad}(o_i) = P(o_i)$ para todo $i$. Por el Lema C, $\text{honda} = \max(\{0\} \cup \{P(o_i)\})$, y entonces $\text{profundidad}(o) \rightarrow 1 + \text{honda} = P(o)$. Para $n = 0$ da $1 + 0 = 1$.
 
-Concluimos por inducción estructural. $\blacksquare$
+Concluimos por inducción estructural.
 
 ## 5. Punto 4: rutinas y funciones de alto orden
 
@@ -310,7 +317,7 @@ $$
 \rightarrow \text{ejecutar}(\text{ejecutar}(e, o_1), o_2)
 $$
 
-El `foldLeft` sobre una lista de dos elementos aplica primero $o_1$ a $e$ y luego $o_2$ al resultado. Es lo mismo que el Lema B con $n = 2$. $\blacksquare$
+El `foldLeft` sobre una lista de dos elementos aplica primero $o_1$ a $e$ y luego $o_2$ al resultado. Es lo mismo que el Lema B con $n = 2$.
 
 En términos de la especificación: $\mathcal{E}(\text{componer}(o_1, o_2)) = \mathcal{E}(o_2) \circ \mathcal{E}(o_1)$.
 
@@ -335,7 +342,7 @@ $$
 \mathcal{E}(c) = \mathcal{E}(\text{Girar}(giro)) \circ \mathcal{E}(\text{Avanzar}(pasos)) = R
 $$
 
-Por el Lema A, $\text{ejecutar}(e, \text{Repetir}(v, c)) == \mathcal{E}(c)^{v}(e) = R^{v}(e)$. $\blacksquare$
+Por el Lema A, $\text{ejecutar}(e, \text{Repetir}(v, c)) == \mathcal{E}(c)^{v}(e) = R^{v}(e)$.
 
 Es decir, ejecutar la rutina `v` veces es ejecutar `v` veces sus partes (`Avanzar(pasos)` y luego `Girar(giro)`), en ese orden.
 
@@ -345,7 +352,7 @@ $$
 \text{ejecutar}(e, \text{rutina}(pasos)(giro)(v + w)) == \text{ejecutar}(\text{ejecutar}(e, \text{rutina}(pasos)(giro)(v)),\ \text{rutina}(pasos)(giro)(w))
 $$
 
-Por el Teorema 6, el lado izquierdo es $R^{v+w}(e)$ y el derecho es $R^{w}(R^{v}(e))$, y son iguales porque $R^{v+w} = R^{w} \circ R^{v}$. $\blacksquare$
+Por el Teorema 6, el lado izquierdo es $R^{v+w}(e)$ y el derecho es $R^{w}(R^{v}(e))$, y son iguales porque $R^{v+w} = R^{w} \circ R^{v}$.
 
 **Sobre la currificación.** `rutina(pasos)(giro)` es la función `veces => rutina(pasos)(giro)(veces)`. Fijar los dos primeros argumentos no cambia el valor de ninguna llamada completa, así que el Teorema 6 vale para cualquier aplicación parcial.
 
@@ -366,7 +373,7 @@ Se demuestra por inducción sobre la lista.
 
 **Caso base:** $\text{Nil.map}(f) \rightarrow \text{Nil}$, y la lista de resultados también es vacía.
 
-**Caso de inducción:** $\text{estados} = e_1 :: t$. Por la definición de `map`, $\text{aplicarA}(e_1 :: t, o) \rightarrow \text{ejecutar}(e_1, o) :: t.\text{map}(\ldots)$. Por el Teorema 2, $\text{ejecutar}(e_1, o) = \mathcal{E}(o)(e_1)$, y por HI $t.\text{map}(\ldots) = \text{List}(\mathcal{E}(o)(e_2), \ldots, \mathcal{E}(o)(e_n))$. Se concluye por inducción. $\blacksquare$
+**Caso de inducción:** $\text{estados} = e_1 :: t$. Por la definición de `map`, $\text{aplicarA}(e_1 :: t, o) \rightarrow \text{ejecutar}(e_1, o) :: t.\text{map}(\ldots)$. Por el Teorema 2, $\text{ejecutar}(e_1, o) = \mathcal{E}(o)(e_1)$, y por HI $t.\text{map}(\ldots) = \text{List}(\mathcal{E}(o)(e_2), \ldots, \mathcal{E}(o)(e_n))$. Se concluye por inducción.
 
 La misma orden se ejecuta sobre cada estado de forma independiente, en el mismo orden de la lista.
 
@@ -398,11 +405,11 @@ Se demuestra por inducción estructural sobre $o$.
 
 **Caso de inducción:** $o = \text{Repetir}(k, o')$. Por HI, $\text{transformar}(o', f) = T_f(o')$. Entonces $\text{transformar}(o, f) \rightarrow \text{Repetir}(k, T_f(o')) = T_f(o)$, con el mismo $k$.
 
-**Caso de inducción:** $o = \text{Secuencia}(\text{List}(o_1, \ldots, o_n))$. Por HI, $\text{transformar}(o_i, f) = T_f(o_i)$ para todo $i$. Por la propiedad de `map` (Punto 3), el resultado es $\text{Secuencia}(\text{List}(T_f(o_1), \ldots, T_f(o_n))) = T_f(o)$, con $n$ elementos en el mismo orden. $\blacksquare$
+**Caso de inducción:** $o = \text{Secuencia}(\text{List}(o_1, \ldots, o_n))$. Por HI, $\text{transformar}(o_i, f) = T_f(o_i)$ para todo $i$. Por la propiedad de `map` (Punto 3), el resultado es $\text{Secuencia}(\text{List}(T_f(o_1), \ldots, T_f(o_n))) = T_f(o)$, con $n$ elementos en el mismo orden.
 
 **Corolario 8.1.** Si $f$ no cambia el efecto de las órdenes básicas, es decir $\mathcal{E}(f(b)) = \mathcal{E}(b)$ para toda orden básica $b$, entonces $\mathcal{E}(\text{transformar}(o, f)) = \mathcal{E}(o)$ para toda $o$.
 
-Demostración por inducción estructural. Casos base: es la hipótesis sobre $f$. `Repetir`: $\mathcal{E}(T_f(o'))^{k} = \mathcal{E}(o')^{k}$ por HI. `Secuencia`: la composición de los $\mathcal{E}(T_f(o_i)) = \mathcal{E}(o_i)$ es la misma. $\blacksquare$
+Demostración por inducción estructural. Casos base: es la hipótesis sobre $f$. `Repetir`: $\mathcal{E}(T_f(o'))^{k} = \mathcal{E}(o')^{k}$ por HI. `Secuencia`: la composición de los $\mathcal{E}(T_f(o_i)) = \mathcal{E}(o_i)$ es la misma.
 
 ## 6. Punto 5: `simplificar`
 
@@ -507,7 +514,7 @@ $$
 
 **Terminación.** `simplificar` solo se llama recursivamente sobre subórdenes estrictos (`orden` en `Repetir`, cada `x` en `ordenes`), y `flatMap`, `foldLeft` y `filter` recorren listas finitas. Siempre termina.
 
-Concluimos por inducción estructural que $\forall o, \forall e : \text{ejecutar}(e, \text{simplificar}(o)) == \text{ejecutar}(e, o)$. $\blacksquare$
+Concluimos por inducción estructural que $\forall o, \forall e : \text{ejecutar}(e, \text{simplificar}(o)) == \text{ejecutar}(e, o)$.
 
 En resumen, cada regla del enunciado conserva el efecto de la orden:
 

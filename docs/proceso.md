@@ -4,13 +4,13 @@ Fundamentos de Programación Funcional y Concurrente
 
 El robot ocupa una celda $(x, y)$ de una cuadrícula infinita y mira hacia un punto
 cardinal. Empieza en el origen mirando al norte: `inicial = Estado(0, 0, Norte)`.
-Avanzar hacia el norte aumenta $y$, hacia el este aumenta $x$; avanzar con $n$
+Avanzar hacia el norte aumenta $y$, hacia el este aumenta $x$, avanzar con $n$
 negativo retrocede.
 
 Todas las funciones se escriben con `match` sobre las alternativas de `Orden`, sin
 variables mutables ni ciclos. La recursión sigue la forma del tipo: `Repetir` y
 `Secuencia` contienen otras órdenes, así que las funciones que las recorren son
-recursivas. Las trazas que siguen se obtuvieron ejecutando el código del proyecto.
+recursivas..
 
 ## Punto 1: `girar`
 
@@ -112,9 +112,10 @@ suma las de sus hijas (`map` y `sum`) y un `Repetir(v, o)` multiplica por $v$.
 `Secuencia` es $1 +$ el máximo de las suyas (`foldLeft` con `math.max`).
 
 Para el cuadrado se llega a `8` así: la secuencia interna vale $1 + 1 = 2$ y la
-repetición multiplica por 4, dando `8`. La profundidad es $1$ (el cuadrado
-contiene una `Secuencia`, que contiene básicas). Ninguna de las dos ejecuta la
-orden, entonces no hay trazas de posiciones.
+repetición multiplica por 4, dando `8`. La profundidad es $3$: el cuadrado es un
+`Repetir` ($1$), seguido de la `Secuencia` interna ($2$), seguida de las órdenes
+básicas ($3$). Ninguna de las dos ejecuta la orden, entonces no hay trazas de
+posiciones.
 
 ## Punto 4: órdenes y funciones de alto orden
 
@@ -135,41 +136,46 @@ dirección en que miraba.
 
 ## Punto 5: `simplificar`
 
-La función aplica las reglas del enunciado de forma recursiva: simplifica el
-interior de cada compuesta y vuelve a mirar el resultado. Así, una orden que
-necesita varias pasadas se reduce en un solo recorrido, porque las reglas se
-encadenan de dentro hacia afuera: lo que produce una regla en el interior es lo
-que la siguiente regla encuentra al subir.
+La función aplica las reglas del enunciado en una sola pasada recursiva:
+simplifica primero el interior de cada compuesta y luego procesa el resultado que
+sube. Sobre una `Secuencia` trabaja en tres etapas, en este orden:
+
+1. **Simplificar y aplanar.** Se simplifica cada hija; si el resultado es una
+   `Secuencia`, se reemplaza por sus elementos (esto es el aplanado) y, si no,
+   se deja un solo elemento.
+2. **Juntar avances seguidos** (`foldLeft`): dos `Avanzar` consecutivos se suman
+   en uno.
+3. **Quitar las órdenes que no hacen nada** y decidir la forma final: sin
+   elementos queda `Secuencia(Nil)`, con uno queda ese elemento, y con varios
+   queda la `Secuencia`.
 
 Traza con
 `s = Secuencia(List(Repetir(1, Secuencia(List(Avanzar(1), Avanzar(2)))), Secuencia(Nil), Avanzar(3), Avanzar(0), Girar(Derecha)))`.
-Se muestra el paso de la orden y la regla aplicada:
+Se muestra el estado de la lista de órdenes en cada etapa:
 
-| Paso | Orden en ese momento | Regla |
+| Etapa | Lista de órdenes | Regla |
 |---|---|---|
-| 0 | `Secuencia(List(Repetir(1, Seq(Av1, Av2)), Seq(Nil), Av3, Av0, Gir(D)))` | — |
-| 1 | `Seq(Avanzar(1), Avanzar(2))` en el interior | 2: se juntan en `Avanzar(3)` |
-| 2 | `Repetir(1, Avanzar(3))` | 3: `Repetir(1, o)` es `o` |
-| 3 | `Secuencia(Nil)` | 5: no hace nada y se quita |
-| 4 | `Secuencia(List(Avanzar(3), Avanzar(3), Avanzar(0), Girar(Derecha)))` | 2: se juntan en `Avanzar(6)` |
-| 5 | `Secuencia(List(Avanzar(6), Avanzar(0), Girar(Derecha)))` | 1/5: `Avanzar(0)` se quita |
-| 6 | `Secuencia(List(Avanzar(6), Girar(Derecha)))` | final: más de un elemento, se queda |
+| 0, entrada | `Sec(Rep1(Seq(Av1, Av2)), Seq(Nil), Av3, Av0, Gir(D))` | — |
+| 1a, interior de `Repetir(1, …)` | `Seq(Avanzar(1), Avanzar(2))` → `Avanzar(3)` | 2: se juntan |
+| 1b, `Repetir(1, Avanzar(3))` | → `Avanzar(3)` | 3: `Repetir(1, o)` es `o` |
+| 1c, hijas ya simplificadas | `List(Av3, Seq(Nil), Av3, Seq(Nil), Gir(D))` | 1: `Av0` ya es `Seq(Nil)` |
+| 1d, aplanado (`flatMap`) | `List(Avanzar(3), Avanzar(3), Girar(Derecha))` | 5: las `Seq(Nil)` no aportan elementos |
+| 2, juntar (`foldLeft`) | `List(Avanzar(6), Girar(Derecha))` | 2: `Av3 + Av3` en `Avanzar(6)` |
+| 3, quitar inútiles y decidir | `List(Avanzar(6), Girar(Derecha))` | más de un elemento: se queda como `Secuencia` |
 
 Resultado: `Secuencia(List(Avanzar(6), Girar(Derecha)))`. La orden original y la
 simplificada ejecutan el mismo resultado: ambas dejan `Estado(0, 6, Este)`.
 
-Otro caso que necesita más de una pasada:
-`Repetir(2, Secuencia(List(Avanzar(1), Avanzar(2))))`. Primero se simplifica el
-interior a `Avanzar(3)` (regla 2); el `Repetir(2, Avanzar(3))` no se puede
-reducir más, pero el resultado ya es más corto. Con `Repetir(1, ...)` el mismo
-interior daría directamente `Avanzar(3)`.
+Otro caso, con una repetición que se simplifica por dentro pero no por fuera:
+`Repetir(2, Secuencia(List(Avanzar(1), Avanzar(2))))`. El interior se reduce a
+`Avanzar(3)` (regla 2), y como los `Repetir` con dos o más veces no se tocan, el
+resultado es `Repetir(2, Avanzar(3))`, que ya es más corto que la orden original.
+Con `Repetir(1, ...)` el mismo interior daría directamente `Avanzar(3)` (regla 3).
 
 ```mermaid
 flowchart TD
-    S["Secuencia(Repetir(1, Seq(Av1, Av2)), Seq(Nil), Av3, Av0, Gir(D))"]
-    S --> R1["interior: Seq(Av1, Av2) → Avanzar(3)"]
-    R1 --> R2["Repetir(1, Avanzar(3)) → Avanzar(3)"]
-    R2 --> R3["quitar Seq(Nil) y Avanzar(0)"]
-    R3 --> R4["juntar Avanzar(3) + Avanzar(3) → Avanzar(6)"]
-    R4 --> R5["Secuencia(Avanzar(6), Girar(Derecha))"]
+    S["Secuencia(Rep1(Seq(Av1, Av2)), Seq(Nil), Av3, Av0, Gir(D))"]
+    S --> R1["1. simplificar hijas y aplanar<br/>List(Av3, Av3, Gir(D))"]
+    R1 --> R2["2. juntar avances seguidos<br/>List(Avanzar(6), Gir(D))"]
+    R2 --> R3["3. quitar inútiles y decidir forma<br/>Secuencia(Avanzar(6), Girar(Derecha))"]
 ```
