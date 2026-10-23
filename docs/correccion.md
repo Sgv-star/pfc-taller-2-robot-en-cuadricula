@@ -34,6 +34,10 @@ $$
 $$
 
 $$
+\mathcal{E}(\text{Girar}(s))(x, y, m) = (x,\ y,\ g(m, s))
+$$
+
+$$
 \mathcal{E}(\text{Repetir}(k, o)) = \mathcal{E}(o)^{k}, \qquad \mathcal{E}(\text{Secuencia}(\text{List}(o_1, \ldots, o_n))) = \mathcal{E}(o_n) \circ \cdots \circ \mathcal{E}(o_1)
 $$
 
@@ -117,6 +121,12 @@ $$
 \rightarrow \mathcal{E}(o)^{k-1}(\mathcal{E}(o)(e)) = \mathcal{E}(o)^{k}(e)
 $$
 
+La última igualdad usa que $f^{k-1} \circ f = f \circ f^{k-1} = f^{k}$, con $f = \mathcal{E}(o)$. Las potencias de una misma función conmutan con ella, lo que se ve por inducción sobre $j$: $f^{0} \circ f = f = f \circ f^{0}$, y si $f^{j} \circ f = f \circ f^{j}$, entonces
+
+$$
+f^{j+1} \circ f = (f \circ f^{j}) \circ f = f \circ (f^{j} \circ f) = f \circ (f \circ f^{j}) = f \circ f^{j+1}
+$$
+
 Concluimos por inducción sobre $k$.
 
 ### Lema B: el `foldLeft` de `Secuencia` es una iteración correcta
@@ -145,7 +155,7 @@ $$
 acc' = \text{ejecutar}(acc, o_i) = \mathcal{E}(o_i)(acc) = \mathcal{E}(o_i) \circ \cdots \circ \mathcal{E}(o_1)(e) \quad \land \quad l' = l.\text{tail} = \text{List}(o_{i+1}, \ldots, o_n)
 $$
 
-(La segunda igualdad usa la hipótesis sobre $o_i$.) Es la invariante con $i + 1$.
+(La primera igualdad usa la hipótesis sobre $o_i$, y la segunda usa la invariante: $acc = \mathcal{E}(o_{i-1}) \circ \cdots \circ \mathcal{E}(o_1)(e)$.) Es la invariante con $i + 1$.
 
 **3.** $\text{Inv}(s_f) \rightarrow$ respuesta correcta. En un estado final $l = \text{List}()$, es decir $i = n + 1$, y entonces $acc = \mathcal{E}(o_n) \circ \cdots \circ \mathcal{E}(o_1)(e)$.
 
@@ -492,11 +502,11 @@ Demostración de los puntos:
 
 **4.** En cada paso $l$ pierde un elemento, así que se llega al estado final.
 
-**Etapa 3: `sinCeros` (quitar órdenes que no hacen nada, Reglas 1 y 5).** Se quitan los elementos iguales a `Avanzar(0)`, cuyo efecto es $\text{id}$. Por inducción sobre la lista, quitar elementos con efecto $\text{id}$ de una composición no cambia el resultado:
+**Etapa 3: `sinCeros` (quitar órdenes que no hacen nada, Reglas 1 y 5).** Se quitan los elementos iguales a `Avanzar(0)`, cuyo efecto es $\text{id}$. Por inducción sobre la lista $l$, quitar elementos con efecto $\text{id}$ de una composición no cambia el resultado, es decir $\Sigma(l.\text{filter}(x \Rightarrow x \neq \text{Avanzar}(0))) = \Sigma(l)$:
 
-$$
-\text{Nil}: \text{trivial.} \qquad x :: t:\ \Sigma(x :: t) = \Sigma(t) \circ \mathcal{E}(x) = \Sigma(t) \ \text{si } \mathcal{E}(x) = \text{id}
-$$
+- $\text{Nil}$: trivial.
+- $l = x :: t$ con $x = \text{Avanzar}(0)$ (el filtro lo quita): $\Sigma(x :: t) = \Sigma(t) \circ \mathcal{E}(x) = \Sigma(t)$, porque $\mathcal{E}(x) = \text{id}$. Por HI, $\Sigma(t) = \Sigma(t.\text{filter}(\ldots))$, que es el resultado del filtro sobre $l$.
+- $l = x :: t$ con $x \neq \text{Avanzar}(0)$ (el filtro lo conserva): el filtro da $x :: t.\text{filter}(\ldots)$, y $\Sigma(x :: t.\text{filter}(\ldots)) = \Sigma(t.\text{filter}(\ldots)) \circ \mathcal{E}(x) = \Sigma(t) \circ \mathcal{E}(x) = \Sigma(x :: t)$, donde la segunda igualdad usa la HI.
 
 Entonces $\Sigma(\text{sinCeros}) = \Sigma(\text{juntas})$. (El filtro va después de juntar porque dos avances pueden sumar cero, como `Avanzar(2)` y `Avanzar(-2)`.)
 
